@@ -17,7 +17,7 @@ function Login({ setIsAuthenticated }) {
   };
 
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('auth');
+    const isAuthenticated = localStorage.getItem('auth');
     if (isAuthenticated) {
       navigate('/');
     }
@@ -26,10 +26,13 @@ function Login({ setIsAuthenticated }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/login', { email, password });
+      const response = await axios.post('http://localhost:5000/login', { email, password });
       if (response.data.success) {
         setIsAuthenticated(true);
         localStorage.setItem('auth', true);
+        const token = response.data.token; // Get token from response
+        localStorage.setItem('token', token); // Store token properly
+
 
         navigate('/');
       } else {
