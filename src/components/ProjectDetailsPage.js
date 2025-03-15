@@ -6,16 +6,23 @@ import { DashboardContainer, MainContent } from "./styles";
 import { CiSquarePlus } from "react-icons/ci";
 import AddTaskForm from "./TaskAddForm";
 import axios from "axios";
+import AddMember from "./AddMember";
 
 
 const ProjectDetailsPage = () => {
     const [isSidebarOpen, setSidebarOpen] = useState(true);
     const [project, setProject] = useState({ tasks: [], members: [] }); // Default empty tasks array
     const [showTaskForm, setShowTaskForm] = useState(false);
+    const [isTeamExpanded, setIsTeamExpanded] = useState(false);
 
 
     const navigate = useNavigate();
     const { projectId } = useParams(); // Get project ID from URL
+
+    const handleTeamsClick = () => {
+        setIsTeamExpanded(!isTeamExpanded);
+    };
+
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -55,9 +62,10 @@ const ProjectDetailsPage = () => {
                 <Sidebar 
                     isSidebarOpen={isSidebarOpen} 
                     isProjectPage={true} 
+                    onTeamsClick={handleTeamsClick}
                     teamMembers={project.members || []} // Pass dynamic team members
                 />
-    
+                
                 {/* Main Content */}
                 <MainContent 
                     isSidebarOpen={isSidebarOpen} 
