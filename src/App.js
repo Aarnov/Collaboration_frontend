@@ -5,6 +5,7 @@ import Signup from './components/Login/Signup';
 import Dashboard from './components/Dashboard';
 import NotFound from './components/NotFound'; // Import 404 page
 import ProjectDetailsPage from './components/ProjectDetailsPage';
+import TaskDetailsPage from './components/TaskDetailsPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -32,7 +33,8 @@ function App() {
         path="/dashboard" 
         element={isAuthenticated ? <Dashboard handleLogout={handleLogout} /> : <Navigate to="/login" />}
       />
-     <Route path="/project/:projectId" element={<ProjectDetailsPage />} />
+     <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+     <Route path="/projects/tasks/:taskId" element={<TaskDetailsPage />} />
 
       
       {/* 404 Page Not Found */}

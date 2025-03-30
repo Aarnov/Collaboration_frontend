@@ -35,8 +35,6 @@ const Dashboard = ({ handleLogout }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
   
-        console.log("Fetched projects:", response.data); // Debugging line
-  
         setProjects(response.data);
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -70,7 +68,10 @@ const Dashboard = ({ handleLogout }) => {
               <ProjectTile
                 key={project.project_id}
                 project={project}
-                onClick={() => navigate(`/project/${project.project_id}`)}
+                onClick={() => {
+                  console.log("Navigating to:", `/projects/${project.project_id}`);
+                  navigate(`/projects/${project.project_id}`);
+                }}
               />
             ))}
           </ProjectsContainer>

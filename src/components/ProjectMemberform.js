@@ -1,86 +1,131 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { FaProjectDiagram } from "react-icons/fa";
-import axios from 'axios';
+import axios from "axios";
 
 const AddProjectMemberForm = ({ onAddMember, onClose }) => {
-   
+    const [isJoining, setIsJoining] = useState(false); // Toggle between Create & Join
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [projectKey, setProjectKey] = useState("");
 
-
-    const handleSubmit = async (e) => {
+    // Handle Create Project
+    const handleCreateProject = async (e) => {
         e.preventDefault();
-    
         try {
-            const token = localStorage.getItem('token');
-    
-            if (!token) {
-                console.error("No token found, user is not authenticated");
-                return;
-            }
-    
+            const token = localStorage.getItem("token");
+            if (!token) return console.error("No token found, user is not authenticated");
+
             const response = await axios.post(
-                'http://localhost:5000/add-project',
+                "http://localhost:5000/add-project",
                 { name, description },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-    
+
             if (response.status === 200) {
-                const newProject = response.data; // Assuming backend returns the new project data
-                onAddMember(newProject); // Pass the new project to Dashboard
+                onAddMember(response.data); // Pass new project to dashboard
                 setName("");
                 setDescription("");
                 alert("Project Created Successfully");
-                onClose(); // Close the form after submission
+                onClose();
             }
         } catch (error) {
             console.error("Error adding project:", error.response?.data || error.message);
         }
     };
-    
-    
+
+    // Handle Join Project
+    const handleJoinProject = async (e) => {
+        e.preventDefault();
+        try {
+            console.log(1);
+            const token = localStorage.getItem("token");
+            if (!token) return console.error("No token found, user is not authenticated");
+
+            const response = await axios.post(
+                "http://localhost:5000/join-project",
+                { projectKey },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.status === 200) {
+                alert("Joined project successfully!");
+                setProjectKey("");
+                onClose();
+            } else {
+                alert("Invalid project key. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error joining project:", error.response?.data || error.message);
+        }
+    };
 
     return (
         <FormContainer>
-            <h2><FaProjectDiagram style={{ color: "orange" }} /> Project Details</h2>
+            <h2>
+                <FaProjectDiagram style={{ color: "orange" }} /> {isJoining ? "Join Project" : "Project Details"}
+            </h2>
 
+            <ToggleButton onClick={() => setIsJoining(!isJoining)}>
+                {isJoining ? "Switch to Create Project" : "Switch to Join Project"}
+            </ToggleButton>
 
-            <FormGroup>
-                <FormLabel>Project Name <span style={{ color: "red" }}>*</span></FormLabel>
-                <FormInput 
-                    type="text" 
-                    value={name} 
-                    onChange={(e) => setName(e.target.value)} 
-                    placeholder="Enter Project Name"
-                    required
-                />
-            </FormGroup>
+            {isJoining ? (
+                // Join Project Form
+                <form onSubmit={handleJoinProject}>
+                    <FormGroup>
+                        <FormLabel>Project Key <span style={{ color: "red" }}>*</span></FormLabel>
+                        <FormInput 
+                            type="text" 
+                            value={projectKey} 
+                            onChange={(e) => setProjectKey(e.target.value)} 
+                            placeholder="Enter Project Key"
+                            required
+                        />
+                    </FormGroup>
 
-            <FormGroup>
-                <FormLabel>Project Description</FormLabel>
-                <FormTextarea 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    placeholder="Enter Project Description" 
-                />
-            </FormGroup>
+                    <FormButtonContainer>
+                        <FormButton type="submit"  onClick={handleJoinProject}>Join Project</FormButton>
+                        <FormButton type="button" onClick={onClose} style={{ background: "red" }}>
+                            Close Form
+                        </FormButton>
+                    </FormButtonContainer>
+                </form>
+            ) : (
+                // Create Project Form
+                <form onSubmit={handleCreateProject}>
+                    <FormGroup>
+                        <FormLabel>Project Name <span style={{ color: "red" }}>*</span></FormLabel>
+                        <FormInput 
+                            type="text" 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)} 
+                            placeholder="Enter Project Name"
+                            required
+                        />
+                    </FormGroup>
 
-       
+                    <FormGroup>
+                        <FormLabel>Project Description</FormLabel>
+                        <FormTextarea 
+                            value={description} 
+                            onChange={(e) => setDescription(e.target.value)} 
+                            placeholder="Enter Project Description" 
+                        />
+                    </FormGroup>
 
-            <FormButtonContainer>
-                <FormButton type="submit" onClick={handleSubmit}>Add Project</FormButton>
-                <FormButton 
-                    type="button" 
-                    onClick={onClose} 
-                    style={{ background: "red" }}
-                >
-                    Close Form
-                </FormButton>
-            </FormButtonContainer>
+                    <FormButtonContainer>
+                        <FormButton type="submit" onClick={handleCreateProject}>Add Project</FormButton>
+                        <FormButton type="button" onClick={onClose} style={{ background: "red" }}>
+                            Close Form
+                        </FormButton>
+                    </FormButtonContainer>
+                </form>
+            )}
         </FormContainer>
     );
-};  
+};
+
 export default AddProjectMemberForm;
 
 const FormContainer = styled.div`
@@ -177,5 +222,19 @@ const FormButton = styled.button`
 
     &:active {
         transform: scale(1);
+    }
+`;
+
+const ToggleButton = styled.button`
+    background: transparent;
+    color: white;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 10px;
+    text-decoration: underline;
+
+    &:hover {
+        color: orange;
     }
 `;

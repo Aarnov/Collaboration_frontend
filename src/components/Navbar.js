@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaHome, FaUserCircle, FaSignOutAlt, FaBell } from "react-icons/fa";
 import { FaAnglesRight } from "react-icons/fa6";
+import { io } from "socket.io-client";
+
 import {
   NavbarContainer,
   Logo,
@@ -10,43 +12,35 @@ import {
   MinimizeIcon,
   NavItem,
 } from "./styles";
-import { io } from "socket.io-client";
 
-const socket =io("http://localhost:5001");
 
-const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout, notifications }) => {
+const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
 
-  useEffect(() => {
-    const userEmail = localStorage.getItem("userEmail"); // Get user email
-    if (userEmail) {
-        socket.emit("join", userEmail);
+
+  const handleResponse = async (notificationId, response) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/notifications/respond`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ notificationId, response }),
+      });
+
+      if (!res.ok) throw new Error("Failed to respond to notification");
+
+      setNotificationsList((prev) =>
+        prev.filter((notif) => notif.id !== notificationId)
+      );
+    } catch (error) {
+      console.error("Error responding to notification:", error);
     }
-
-    socket.on("newNotification", (notification) => {
-        setNotificationsList((prev) => [...prev, notification]);
-    });
-
-    return () => {
-        socket.off("newNotification");
-    };
-}, []);
-
-  const confirmLogout = () => {
-    setShowLogoutModal(true);
-  };
-
-  const handleLogoutConfirm = () => {
-    handleLogout();
-    navigate("/login");
-  };
-
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
   };
 
   return (
@@ -63,70 +57,28 @@ const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout, notifications }) 
           <FaAnglesRight />
         </MinimizeIcon>
 
-        <Logo
-          onClick={() => navigate("/dashboard")}
-          style={{
-            cursor: "pointer",
-            fontSize: "24px",
-            fontWeight: "bold",
-            color: "#ff6347",
-            textShadow: "2px 2px 4px rgba(0, 0, 0, 0.3)",
-            padding: "10px 20px",
-            borderRadius: "10px",
-            transition: "transform 0.3s, box-shadow 0.3s, color 0.3s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 6px 12px rgba(216, 119, 8, 0.5)";
-            e.currentTarget.style.color = "#ff4500";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 6px rgba(86, 90, 95, 0.05)";
-            e.currentTarget.style.color = "#ff6347";
-          }}
-        >
+        <Logo onClick={() => navigate("/dashboard")} style={{ cursor: "pointer" }}>
           Collaboration App
         </Logo>
       </div>
 
       <NavLinks>
-        {/* Home Link */}
         <NavItem>
-          <NavLink
-            onClick={() => navigate("/dashboard")}
-            style={{
-              color: location.pathname === "/dashboard" ? "#ff6347" : "#FFFFFF",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#ff6347")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === "/dashboard" ? "#ff6347" : "#FFFFFF")}
-          >
+          <NavLink onClick={() => navigate("/dashboard")}>
             <FaHome style={{ marginRight: "8px" }} />
             Home
           </NavLink>
         </NavItem>
 
-        {/* Profile Link */}
         <NavItem>
-          <NavLink
-            onClick={() => navigate("/profile")}
-            style={{
-              color: location.pathname === "/profile" ? "#ff6347" : "#FFFFFF",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#ff6347")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === "/profile" ? "#ff6347" : "#FFFFFF")}
-          >
+          <NavLink onClick={() => navigate("/profile")}>
             <FaUserCircle style={{ marginRight: "8px" }} />
             Profile
           </NavLink>
         </NavItem>
 
-        {/* Notifications */}
         <NavItem style={{ position: "relative" }}>
-          <NavLink
-            onClick={toggleNotifications}
-            style={{ display: "flex", alignItems: "center", color: "#FFFFFF" }}
-          >
+          <NavLink onClick={() => setShowNotifications(!showNotifications)}>
             <FaBell size={20} style={{ marginRight: "8px" }} />
             Notifications
             {notificationsList.length > 0 && (
@@ -141,7 +93,6 @@ const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout, notifications }) 
                   padding: "4px 8px",
                   fontSize: "12px",
                   fontWeight: "bold",
-                  boxShadow: "0 0 5px rgba(0, 0, 0, 0.3)",
                 }}
               >
                 {notificationsList.length}
@@ -159,36 +110,61 @@ const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout, notifications }) 
                 border: "1px solid #2C2C2C",
                 borderRadius: "8px",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                zIndex: 1000,
                 width: "280px",
                 maxHeight: "300px",
                 overflowY: "auto",
                 color: "#FFFFFF",
               }}
             >
-              <div style={{ padding: "12px", fontWeight: "bold", borderBottom: "1px solid #2C2C2C", textAlign: "center" }}>
+              <div style={{ padding: "12px", fontWeight: "bold", textAlign: "center" }}>
                 Notifications
               </div>
 
               {notificationsList.length > 0 ? (
-                notificationsList.map((notification, index) => (
+                notificationsList.map((notification) => (
                   <div
-                    key={index}
+                    key={notification.id}
                     style={{
                       padding: "12px",
                       borderBottom: "1px solid #2C2C2C",
-                      cursor: "pointer",
-                      transition: "background 0.3s",
                       fontSize: "14px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#444")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <div style={{ fontWeight: "bold" }}>{notification.sent_by}</div>
                     <div>{notification.message}</div>
                     <div style={{ fontSize: "12px", color: "#CCCCCC" }}>
                       {new Date(notification.created_at).toLocaleString()}
                     </div>
+                    {notification.type === "invitation" && (
+                      <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between" }}>
+                        <button
+                          onClick={() => handleResponse(notification.id, "accepted")}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "5px",
+                            border: "none",
+                            backgroundColor: "#00C851",
+                            color: "#FFFFFF",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleResponse(notification.id, "rejected")}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "5px",
+                            border: "none",
+                            backgroundColor: "#FF4444",
+                            color: "#FFFFFF",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -200,30 +176,13 @@ const Navbar = ({ setSidebarOpen, isSidebarOpen, handleLogout, notifications }) 
           )}
         </NavItem>
 
-        {/* Logout */}
         <NavItem>
-          <NavLink
-            onClick={confirmLogout}
-            onMouseOver={(e) => (e.currentTarget.style.color = "#ff6347")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#FF4444")}
-            style={{ color: "#FF4444", display: "flex", alignItems: "center" }}
-          >
+          <NavLink onClick={handleLogout} style={{ color: "#FF4444" }}>
             <FaSignOutAlt style={{ marginRight: "8px" }} />
             Logout
           </NavLink>
         </NavItem>
       </NavLinks>
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0, 0, 0, 0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-          <div style={{ backgroundColor: "#1A1A1A", padding: "20px", borderRadius: "10px", textAlign: "center", color: "#FFFFFF" }}>
-            <p>Are you sure you want to logout?</p>
-            <button onClick={handleLogoutConfirm} style={{ backgroundColor: "#FF6347", color: "#FFFFFF", border: "none", padding: "10px 20px", borderRadius: "5px", cursor: "pointer", marginRight: "10px" }}>Yes</button>
-            <button onClick={() => setShowLogoutModal(false)} style={{ backgroundColor: "#2C2C2C", color: "#FFFFFF", border: "none", padding: "10px 20px", borderRadius: "5px", cursor: "pointer" }}>No</button>
-          </div>
-        </div>
-      )}
     </NavbarContainer>
   );
 };

@@ -1,13 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { FaTasks } from "react-icons/fa";
 import axios from "axios";
 
 const AddTaskForm = ({ projectId, onAddTask, onClose }) => {
     const [taskName, setTaskName] = useState("");
+    const [description, setDescription] = useState("");
     const [assignedTo, setAssignedTo] = useState("");
     const [dueDate, setDueDate] = useState("");
     const [priority, setPriority] = useState("Medium");
+    const [teamMembers, setTeamMembers] = useState([]); // Store project members
+
+    // Fetch team members for assignment
+    useEffect(() => {
+        (async () => {
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    console.error("No token found, redirecting to login...");
+                    return;
+                }
+
+                const response = await axios.get(
+                    `http://localhost:5000/projects/${projectId}/members`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                console.log("Fetched Team Members:", response.data); // Debugging
+                setTeamMembers(response.data);
+            } catch (error) {
+                console.error("Error fetching team members:", error);
+            }
+        })();
+    }, [projectId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,21 +45,30 @@ const AddTaskForm = ({ projectId, onAddTask, onClose }) => {
                 return;
             }
 
+            const taskData = {
+                title: taskName, 
+                description,  // Added description field
+                assigned_to: assignedTo, 
+                due_date: dueDate 
+            };
+
+            console.log("Sending Task Data:", taskData); // Debugging
+
             const response = await axios.post(
                 `http://localhost:5000/projects/${projectId}/add-task`,
-                { name: taskName, assigned_to: assignedTo, due_date: dueDate, priority },
+                taskData,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            if (response.status === 200) {
-                const newTask = response.data; // Assuming backend returns the newly added task
-                onAddTask(newTask); // Update the task list in the UI
+            if (response.status === 201) { 
+                const newTask = response.data; 
+                onAddTask(newTask);
                 setTaskName("");
+                setDescription("");
                 setAssignedTo("");
                 setDueDate("");
-                setPriority("Medium");
                 alert("Task Created Successfully");
-                onClose(); // Close the form after submission
+                onClose();
             }
         } catch (error) {
             console.error("Error adding task:", error.response?.data || error.message);
@@ -57,14 +91,35 @@ const AddTaskForm = ({ projectId, onAddTask, onClose }) => {
             </FormGroup>
 
             <FormGroup>
-                <FormLabel>Assigned To</FormLabel>
-                <FormInput 
-                    type="text" 
-                    value={assignedTo} 
-                    onChange={(e) => setAssignedTo(e.target.value)} 
-                    placeholder="Enter Assignee Name"
+                <FormLabel>Description</FormLabel>
+                <FormTextarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter Task Description"
                 />
             </FormGroup>
+
+            <FormGroup>
+    <FormLabel>Assigned To</FormLabel>
+    <FormSelect
+        value={assignedTo}
+        onChange={(e) => {
+            const selectedName = e.target.value; // Get the selected name
+            const selectedMember = teamMembers.find(
+                (member) => member.name === selectedName // Find member by name
+            );
+            console.log(selectedMember);
+            setAssignedTo(selectedMember ? selectedMember.user_id : ""); // Store ID
+        }}
+    >
+        <option value="">Select Member</option>
+        {teamMembers.map((member) => (
+            <option key={member.user_id} value={member.name}>
+                {member.name}
+            </option>
+        ))}
+    </FormSelect>
+</FormGroup>
 
             <FormGroup>
                 <FormLabel>Due Date</FormLabel>
@@ -73,18 +128,6 @@ const AddTaskForm = ({ projectId, onAddTask, onClose }) => {
                     value={dueDate} 
                     onChange={(e) => setDueDate(e.target.value)} 
                 />
-            </FormGroup>
-
-            <FormGroup>
-                <FormLabel>Priority</FormLabel>
-                <FormSelect 
-                    value={priority} 
-                    onChange={(e) => setPriority(e.target.value)}
-                >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                </FormSelect>
             </FormGroup>
 
             <FormButtonContainer>
@@ -102,7 +145,6 @@ const AddTaskForm = ({ projectId, onAddTask, onClose }) => {
 };
 
 export default AddTaskForm;
-
 
 const FormContainer = styled.div`
     background: #1A1A1A;

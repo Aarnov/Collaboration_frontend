@@ -14,14 +14,12 @@ const ProjectDetailsPage = () => {
     const [project, setProject] = useState({ tasks: [], members: [] }); // Default empty tasks array
     const [showTaskForm, setShowTaskForm] = useState(false);
     const [isTeamExpanded, setIsTeamExpanded] = useState(false);
+    
 
 
     const navigate = useNavigate();
     const { projectId } = useParams(); // Get project ID from URL
 
-    const handleTeamsClick = () => {
-        setIsTeamExpanded(!isTeamExpanded);
-    };
 
 
     useEffect(() => {
@@ -37,7 +35,6 @@ const ProjectDetailsPage = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                console.log("Fetched project:", response.data); // Debugging line
                 setProject(response.data); // Store the fetched project
             } catch (error) {
                 console.error("Error fetching project:", error);
@@ -52,7 +49,9 @@ const ProjectDetailsPage = () => {
     if (!project) {
         return <h2 style={{ color: "white" }}>Project not found</h2>;
     }
-
+    const handleTeamClick = () => {
+        setIsTeamExpanded(!isTeamExpanded);
+    };
     
     return (
         <div>
@@ -62,8 +61,8 @@ const ProjectDetailsPage = () => {
                 <Sidebar 
                     isSidebarOpen={isSidebarOpen} 
                     isProjectPage={true} 
-                    onTeamsClick={handleTeamsClick}
-                    teamMembers={project.members || []} // Pass dynamic team members
+                    onTeamsClick={handleTeamClick}
+                    projectId={projectId}
                 />
                 
                 {/* Main Content */}
@@ -135,7 +134,7 @@ const ProjectDetailsPage = () => {
                                                 {task.name}
                                             </span>
                                             <span style={{ color: "rgb(235, 125, 91)", fontSize: "16px" }}>
-                                                Assigned to: {task.assigned_to || "Unassigned"}
+                                                Assigned to: {task.assigned_to_name || "Unassigned"}
                                             </span>
                                             <span style={{ color: "#ccc", fontSize: "14px" }}>
                                                 Due: {task.due_date || "No due date"}
@@ -172,7 +171,9 @@ const ProjectDetailsPage = () => {
                                                 cursor: "pointer",
                                                 transition: "background-color 0.3s, color 0.3s",
                                             }}
-                                            onClick={() => console.log("Task completed!")}
+
+                                            onClick={() => navigate(`/projects/tasks/${task.task_id}`)}
+
                                         >
                                             {task.completed ? "Completed" : "In Progress . . ."}
                                         </button>
@@ -212,7 +213,7 @@ const ProjectDetailsPage = () => {
                 >
                     <CiSquarePlus style={{ width: "50px", height: "50px", color: "orange" }} />
                 </div>
-                {showTaskForm && <AddTaskForm onClose={handleCloseForm} />}
+                {showTaskForm && <AddTaskForm projectId={projectId} onClose={handleCloseForm} />}
             </DashboardContainer>
         </div>
     );
